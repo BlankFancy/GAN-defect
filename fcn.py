@@ -448,8 +448,9 @@ class FCN32s(nn.Module):
                 assert l1.bias.size() == l2.bias.size()
                 l2.weight.data = l1.weight.data
                 l2.bias.data = l1.bias.data
-        for i, name in zip([0, 3], ['fc6', 'fc7']):
-            l1 = vgg16.classifier[i]
-            l2 = getattr(self, name)
-            l2.weight.data = l1.weight.data.view(l2.weight.size())
-            l2.bias.data = l1.bias.data.view(l2.bias.size())
+                for i, name in zip([0, 3], ['fc6', 'fc7']):
+                    l1 = vgg16.classifier[i]
+                    l2 = getattr(self, name)
+                    l2.weight.data = l1.weight.data.view(l2.weight.size())
+                    l2.bias.data = l1.bias.data.view(l2.bias.size())
+

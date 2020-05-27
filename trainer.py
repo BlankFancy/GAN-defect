@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import time
 import sys
+from loss import *
 import os
 from utils import *
 from tqdm.autonotebook import tqdm
@@ -96,17 +97,17 @@ class Trainer():
                                             normalize=True,
                                             range=(-1, 1))
 
-                # if epoch >= opt.s_start and (ii + 1) % opt.s_every == 0 and opt.with_segmentation:
-                #     optimizer_s.zero_grad()
-                #     fake_img = netg(defect).detach()
-                #     seg_input = torch.cat([defect, fake_img], dim=1)
-                #     seg_output = seg_model(seg_input)
-                #     target = target.long()
-                #     loss = cross_entropy2d(seg_output, target)
-                #     loss /= len(defect)
-                #     loss.backward()
-                #     optimizer_s.step()
-                #     s_loss.update(loss)
+                if epoch >= self.opt.s_start and (ii + 1) % self.opt.s_every == 0 and self.opt.with_segmentation:
+                    self.optimizer_s.zero_grad()
+                    # fake_img = netg(defect).detach()
+                    seg_input = torch.cat([defect, normal], dim=1)
+                    seg_output = self.nets(seg_input)
+                    target = target.long()
+                    loss = cross_entropy2d(seg_output, target)
+                    loss /= len(defect)
+                    loss.backward()
+                    self.optimizer_s.step()
+                    s_loss.update(loss)
 
                 progressbar.set_description(
                     'Epoch: {}. Step: {}. Discriminator loss: {:.5f}. Generator loss: {:.5f}. Contrast loss: {:.5f}. Segmentation loss: {:.5f}'.format(

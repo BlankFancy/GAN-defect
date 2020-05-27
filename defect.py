@@ -3,6 +3,7 @@ import torch.nn as nn
 import torchvision
 import torchvision.transforms.functional as FL
 from PIL import Image, ImageDraw
+import cv2
 import numpy as np
 import itertools
 
@@ -37,8 +38,10 @@ class DefectAdder(object):
         color = tuple(np.random.randint(0, 255, 3))
         if shape == 'circle':
             draw.ellipse([x, y, x + size, y + size], fill=color)
+            target = self.generate_target(input.size, shape, [x, y, x + size, y + size])
         elif shape == 'square':
             draw.rectangle([x, y, x + size, y + size], fill=color)
+            target = self.generate_target(input.size, shape, [x, y, x + size, y + size])
         elif shape == 'line':
             while True:
                 x1 = int(np.random.random() * w)
@@ -48,10 +51,10 @@ class DefectAdder(object):
                     continue
                 draw.line([x, y, x1, y1], fill=color, width=width)
                 break
-        target = self.generate_target(input.size, shape, [x, y, x + size, y + size])
+            target = self.generate_target(input.size, shape, [x, y, x1, y1], size)
         return input, target
 
-    def generate_target(self, input_size, mode, xy):
+    def generate_target(self, input_size, mode, xy, size=None):
         target = np.zeros(input_size)
         if mode == 'circle':
             center = [(xy[0] + xy[2]) / 2, (xy[1] + xy[3]) / 2]
@@ -68,6 +71,8 @@ class DefectAdder(object):
                 if np.all(((p - p0) > 0) & ((p1 - p) > 0)):
                     target[i, j] = 1
         elif mode == 'line':
+            assert size is not None
+            target = cv2.line(target, [xy[0], xy[1]], [xy[2], xy[3]], 255, size)
             pass
         return target
 

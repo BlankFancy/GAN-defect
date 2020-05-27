@@ -25,12 +25,6 @@ class Config(object):
     work_dir = '/data/sdv2/GAN/GAN_defect/workdirs/0430'
     val_save_path = '/data/sdv2/GAN/GAN_defect/imgs/0430-val'
 
-    # data_path = r'/data/sdv2/GAN/data/gan_defect/1GE02/train'
-    # val_path = r'/data/sdv2/GAN/data/gan_defect/1GE02/val'
-    # save_path = '/data/sdv2/GAN/GAN_defect/imgs/0427-1ge02'
-    # work_dir = '/data/sdv2/GAN/GAN_defect/workdirs/0427-1ge02'
-    # val_save_path = '/data/sdv2/GAN/GAN_defect/imgs/0427-1ge02-val'
-
     num_workers = 4
     image_size = 128
     batch_size = 16
@@ -59,7 +53,6 @@ class Config(object):
     g_every = 1
     s_every = 5
     s_start = 0
-    decay_every = 10
     netd_path = '/data/sdv2/GAN/GAN_defect/workdirs/0427-1ge02/d_ckpt_e2000.pth'
     netg_path = '/data/sdv2/GAN/GAN_defect/workdirs/0427-1ge02/g_ckpt_e2000.pth'
     # netd_path = None
@@ -72,6 +65,7 @@ class Config(object):
 
     debug = True
     validate = True
+    # TODO: segmentation branch to be deployed
     with_segmentation = False
 
 
