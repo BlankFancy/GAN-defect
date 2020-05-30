@@ -21,21 +21,21 @@ from trainer import *
 class Config(object):
     data_path = r'/data/sdv2/GAN/data/gan_defect/grid_96/train'
     val_path = r'/data/sdv2/GAN/data/gan_defect/grid_96/val'
-    save_path = '/data/sdv2/GAN/GAN_defect/imgs/0430'
-    work_dir = '/data/sdv2/GAN/GAN_defect/workdirs/0430'
-    val_save_path = '/data/sdv2/GAN/GAN_defect/imgs/0430-val'
+    save_path = '/data/sdv2/GAN/GAN_defect/imgs/0530_1'
+    work_dir = '/data/sdv2/GAN/GAN_defect/workdirs/0530_1'
+    val_save_path = '/data/sdv2/GAN/GAN_defect/imgs/0530_1'
 
     num_workers = 4
-    image_size = 128
+    image_size = 96
     batch_size = 16
     max_epoch = 300
-    steps = [100, 200]
-    lrg = 1e-3
+    steps = [200, 250]
+    lrg = 1e-4
     lrd = 1e-4
     lrs = 1e-2
     beta1 = 0.5
 
-    nBottleneck = 4000
+    nBottleneck = 100
     nc = 3
     ngf = 64
     ndf = 64
@@ -52,9 +52,9 @@ class Config(object):
     d_every = 1
     g_every = 1
     s_every = 5
-    s_start = 0
-    netd_path = '/data/sdv2/GAN/GAN_defect/workdirs/0427-1ge02/d_ckpt_e2000.pth'
-    netg_path = '/data/sdv2/GAN/GAN_defect/workdirs/0427-1ge02/g_ckpt_e2000.pth'
+    s_start = 200
+    netd_path = '/data/sdv2/GAN/GAN_defect/workdirs/0530/d_ckpt_e800.pth'
+    netg_path = '/data/sdv2/GAN/GAN_defect/workdirs/0530/g_ckpt_e800.pth'
     # netd_path = None
     # netg_path = None
 
@@ -64,7 +64,7 @@ class Config(object):
     checkpoint_interval = 100
 
     debug = True
-    validate = True
+    validate = False
     # TODO: segmentation branch to be deployed
     with_segmentation = False
 
@@ -85,7 +85,7 @@ def train(opt):
         tv.transforms.Resize(opt.image_size),
         tv.transforms.CenterCrop(opt.image_size),
         # tv.transforms.ToTensor(),
-        DefectAdder(mode=opt.defect_mode, defect_shape=('line',), normal_only=True),
+        DefectAdder(mode=opt.defect_mode, defect_shape=('line',)),
         ToTensorList(),
         NormalizeList(opt.mean, opt.std),
         # tv.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -121,7 +121,7 @@ def train(opt):
     map_location = lambda storage, loc: storage
     netd = Discriminator(opt)
     netg = Generater(opt)
-    nets = FCN32s(n_class=2, input_channels=6)
+    nets = FCN32s(n_class=2, input_channels=3)
 
     if opt.use_gpu:
         netd.cuda()
@@ -167,7 +167,7 @@ def distributed_train(gpu, opt):
         tv.transforms.Resize(opt.image_size),
         tv.transforms.CenterCrop(opt.image_size),
         # tv.transforms.ToTensor(),
-        DefectAdder(mode=opt.defect_mode, defect_shape=('line',), normal_only=True),
+        DefectAdder(mode=opt.defect_mode, defect_shape=('line',)),
         ToTensorList(),
         NormalizeList(opt.mean, opt.std),
         # tv.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -212,7 +212,7 @@ def distributed_train(gpu, opt):
     map_location = lambda storage, loc: storage
     netd = Discriminator(opt)
     netg = Generater(opt)
-    nets = FCN32s(n_class=2, input_channels=6)
+    nets = FCN32s(n_class=2, input_channels=3)
 
     if opt.use_gpu:
         netd.cuda(gpu)

@@ -57,23 +57,21 @@ class DefectAdder(object):
     def generate_target(self, input_size, mode, xy, size=None):
         target = np.zeros(input_size)
         if mode == 'circle':
-            center = [(xy[0] + xy[2]) / 2, (xy[1] + xy[3]) / 2]
-            radius = (xy[2] - xy[0]) / 2
-            for i, j in itertools.product(range(input_size[0]), range(input_size[1])):
-                distance = np.sqrt(np.sum(np.square(np.array([i, j] - np.array(center)))))
-                if distance <= radius:
-                    target[i, j] = 1
+            target = Image.fromarray(target)
+            draw = ImageDraw.Draw(target)
+            draw.ellipse(xy, fill=1)
+            target = np.array(target).astype(np.uint8)
         elif mode == 'square':
-            for i, j in itertools.product(range(input_size[0]), range(input_size[1])):
-                p0 = np.array([xy[0], xy[2]])
-                p1 = np.array([xy[1], xy[3]])
-                p = np.array([i, j])
-                if np.all(((p - p0) > 0) & ((p1 - p) > 0)):
-                    target[i, j] = 1
+            target = Image.fromarray(target)
+            draw = ImageDraw.Draw(target)
+            draw.rectangle(xy, fill=1)
+            target = np.array(target).astype(np.uint8)
         elif mode == 'line':
             assert size is not None
-            target = cv2.line(target, [xy[0], xy[1]], [xy[2], xy[3]], 255, size)
-            pass
+            target = Image.fromarray(target)
+            draw = ImageDraw.Draw(target)
+            draw.line(xy, fill=1, width=size)
+            target = np.array(target).astype(np.uint8)
         return target
 
     def __repr__(self):

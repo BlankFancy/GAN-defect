@@ -98,10 +98,14 @@ class Trainer():
                                             range=(-1, 1))
 
                 if epoch >= self.opt.s_start and (ii + 1) % self.opt.s_every == 0 and self.opt.with_segmentation:
+                    # TODO: deploy segmentation branch and test validity
                     self.optimizer_s.zero_grad()
-                    # fake_img = netg(defect).detach()
-                    seg_input = torch.cat([defect, normal], dim=1)
+                    fake_img = self.netg(defect).detach()
+                    # seg_input = torch.cat([defect, normal], dim=1)
+                    seg_input = torch.sub(fake_img, defect)
+                    seg_input = F.interpolate(seg_input, scale_factor=2)
                     seg_output = self.nets(seg_input)
+                    target = F.interpolate(target, scale_factor=2)
                     target = target.long()
                     loss = cross_entropy2d(seg_output, target)
                     loss /= len(defect)
@@ -141,7 +145,8 @@ class Trainer():
                 target = target.cuda()
             repair = self.netg(defect)
             if self.opt.with_segmentation:
-                seg_input = torch.cat([defect, repair], dim=1)
+                seg_input = torch.sub(repair.detach(), defect)
+                seg_input = F.interpolate(seg_input, scale_factor=2)
                 seg = self.nets(seg_input)
             else:
                 seg = None
@@ -149,7 +154,9 @@ class Trainer():
             if self.opt.with_segmentation:
                 metrics = []
                 lbl_pred = seg.data.max(1)[1].cpu().numpy()[:, :, :]
+                target = F.interpolate(target, scale_factor=2)
                 lbl_true = target.data.cpu().numpy()
+                print(lbl_pred.shape, lbl_true.shape)
                 acc, acc_cls, mean_iu, fwavacc = \
                     label_accuracy_score(
                         lbl_true, lbl_pred, n_class=2)
