@@ -57,36 +57,42 @@ class Trainer():
                     defect = defect.cuda()
                     target = target.cuda()
 
-                if (ii + 1) % self.opt.d_every == 0:
-                    # train discriminator
-                    self.netd.train()
-                    self.optimizer_d.zero_grad()
-
-                    output = self.netd(normal)
-                    error_d_real = self.criterion(output, true_labels)
-                    error_d_real.backward()
-
-                    fake_img = self.netg(defect).detach()
-                    fake_output = self.netd(fake_img)
-                    error_d_fake = self.criterion(fake_output, fake_labels)
-                    error_d_fake.backward()
-                    self.optimizer_d.step()
-                    d_loss.update(error_d_real + error_d_fake)
+                # if (ii + 1) % self.opt.d_every == 0:
+                #     # train discriminator
+                #     self.netd.train()
+                #     self.optimizer_d.zero_grad()
+                #
+                #     output = self.netd(normal)
+                #     error_d_real = self.criterion(output, true_labels)
+                #     error_d_real.backward()
+                #
+                #     fake_img = self.netg(defect).detach()
+                #     fake_output = self.netd(fake_img)
+                #     error_d_fake = self.criterion(fake_output, fake_labels)
+                #     error_d_fake.backward()
+                #     self.optimizer_d.step()
+                #     d_loss.update(error_d_real + error_d_fake)
 
                 if (ii + 1) % self.opt.g_every == 0:
                     # train generator
                     self.optimizer_g.zero_grad()
                     self.netd.eval()
-                    fake_img = self.netg(defect)
-                    fake_output = self.netd(fake_img)
+                    output = self.netg(defect)
+                    fake_img = output[:, :3, :, :]
+                    seg_ = output[:, 3:, :, :]
+                    # fake_output = self.netd(fake_img)
+                    target = target.long()
+                    loss = cross_entropy2d(seg_, target)
 
-                    error_g = self.criterion(fake_output, true_labels)
+                    # error_g = self.criterion(fake_output, true_labels)
                     error_c = self.contrast_criterion(fake_img, normal)
-                    losses = error_g + self.opt.contrast_loss_weight * error_c
+                    # losses = error_g + self.opt.contrast_loss_weight * error_c
+                    losses = self.opt.contrast_loss_weight * error_c + loss
                     losses.backward()
                     self.optimizer_g.step()
-                    g_loss.update(error_g)
+                    # g_loss.update(error_g)
                     c_loss.update(self.opt.contrast_loss_weight * error_c)
+                    s_loss.update(loss)
 
                     if self.opt.debug:
                         if not os.path.exists(self.opt.save_path):
@@ -97,17 +103,17 @@ class Trainer():
                                             normalize=True,
                                             range=(-1, 1))
 
-                if epoch >= self.opt.s_start and (ii + 1) % self.opt.s_every == 0 and self.opt.with_segmentation:
-                    self.optimizer_s.zero_grad()
-                    # fake_img = netg(defect).detach()
-                    seg_input = torch.cat([defect, normal], dim=1)
-                    seg_output = self.nets(seg_input)
-                    target = target.long()
-                    loss = cross_entropy2d(seg_output, target)
-                    loss /= len(defect)
-                    loss.backward()
-                    self.optimizer_s.step()
-                    s_loss.update(loss)
+                # if epoch >= self.opt.s_start and (ii + 1) % self.opt.s_every == 0 and self.opt.with_segmentation:
+                #     self.optimizer_s.zero_grad()
+                #     # fake_img = netg(defect).detach()
+                #     seg_input = torch.cat([defect, normal], dim=1)
+                #     seg_output = self.nets(seg_input)
+                #     target = target.long()
+                #     loss = cross_entropy2d(seg_output, target)
+                #     loss /= len(defect)
+                #     loss.backward()
+                #     self.optimizer_s.step()
+                #     s_loss.update(loss)
 
                 progressbar.set_description(
                     'Epoch: {}. Step: {}. Discriminator loss: {:.5f}. Generator loss: {:.5f}. Contrast loss: {:.5f}. Segmentation loss: {:.5f}'.format(
@@ -140,28 +146,31 @@ class Trainer():
                 defect = defect.cuda()
                 target = target.cuda()
             repair = self.netg(defect)
-            if self.opt.with_segmentation:
-                seg_input = torch.cat([defect, repair], dim=1)
-                seg = self.nets(seg_input)
-            else:
-                seg = None
+            repaired_img = repair[:, :3, :, :]
+            seg_ = repair[:, 3:, :, :]
+            # if self.opt.with_segmentation:
+            #     seg_input = torch.cat([defect, repair], dim=1)
+            #     seg = self.nets(seg_input)
+            # else:
+            #     seg = None
 
-            if self.opt.with_segmentation:
-                metrics = []
-                lbl_pred = seg.data.max(1)[1].cpu().numpy()[:, :, :]
-                lbl_true = target.data.cpu().numpy()
-                acc, acc_cls, mean_iu, fwavacc = \
-                    label_accuracy_score(
-                        lbl_true, lbl_pred, n_class=2)
-                metrics.append((acc, acc_cls, mean_iu, fwavacc))
-                metrics = np.mean(metrics, axis=0)
-                progressbar.set_description(
-                    f'Acc: {metrics[0]:.5f}, Acc_cls: {metrics[1]:.5f}, MIU: {metrics[2]:.5f}, Fwavacc: {metrics[3]:.5f}')
+            # if self.opt.with_segmentation:
+            #     metrics = []
+            #     lbl_pred = seg.data.max(1)[1].cpu().numpy()[:, :, :]
+            #     lbl_true = target.data.cpu().numpy()
+            #     acc, acc_cls, mean_iu, fwavacc = \
+            #         label_accuracy_score(
+            #             lbl_true, lbl_pred, n_class=2)
+            #     metrics.append((acc, acc_cls, mean_iu, fwavacc))
+            #     metrics = np.mean(metrics, axis=0)
+            #     progressbar.set_description(
+            #         f'Acc: {metrics[0]:.5f}, Acc_cls: {metrics[1]:.5f}, MIU: {metrics[2]:.5f}, Fwavacc: {metrics[3]:.5f}')
+
             if self.opt.debug:
                 if not os.path.exists(self.opt.val_save_path):
                     os.makedirs(self.opt.val_save_path)
 
-                imgs = torch.cat((defect, repair), 0)
+                imgs = torch.cat((defect, repaired_img), 0)
                 tv.utils.save_image(imgs, os.path.join(self.opt.val_save_path, '{}_defect_repair.jpg'.format(ii)),
                                     normalize=True,
                                     range=(-1, 1))

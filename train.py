@@ -30,7 +30,7 @@ class Config(object):
     batch_size = 16
     max_epoch = 300
     steps = [100, 200]
-    lrg = 1e-3
+    lrg = 1e-4
     lrd = 1e-4
     lrs = 1e-2
     beta1 = 0.5
@@ -53,10 +53,10 @@ class Config(object):
     g_every = 1
     s_every = 5
     s_start = 0
-    netd_path = '/data/sdv2/GAN/GAN_defect/workdirs/0427-1ge02/d_ckpt_e2000.pth'
-    netg_path = '/data/sdv2/GAN/GAN_defect/workdirs/0427-1ge02/g_ckpt_e2000.pth'
-    # netd_path = None
-    # netg_path = None
+    # netd_path = '/data/sdv2/GAN/GAN_defect/workdirs/0427-1ge02/d_ckpt_e2000.pth'
+    # netg_path = '/data/sdv2/GAN/GAN_defect/workdirs/0427-1ge02/g_ckpt_e2000.pth'
+    netd_path = None
+    netg_path = None
 
     mean = (0.5, 0.5, 0.5)
     std = (0.5, 0.5, 0.5)
@@ -85,7 +85,7 @@ def train(opt):
         tv.transforms.Resize(opt.image_size),
         tv.transforms.CenterCrop(opt.image_size),
         # tv.transforms.ToTensor(),
-        DefectAdder(mode=opt.defect_mode, defect_shape=('line',), normal_only=True),
+        DefectAdder(mode=opt.defect_mode, defect_shape=('line',)),
         ToTensorList(),
         NormalizeList(opt.mean, opt.std),
         # tv.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -103,7 +103,7 @@ def train(opt):
             tv.transforms.Resize(opt.image_size),
             tv.transforms.CenterCrop(opt.image_size),
             # tv.transforms.ToTensor(),
-            DefectAdder(mode=opt.defect_mode, defect_shape=('line',)),
+            DefectAdder(mode=opt.defect_mode, defect_shape=('circle',)),
             ToTensorList(),
             NormalizeList(opt.mean, opt.std),
             # tv.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -120,7 +120,8 @@ def train(opt):
 
     map_location = lambda storage, loc: storage
     netd = Discriminator(opt)
-    netg = Generater(opt)
+    # netg = Generater(opt)
+    netg = U_Net()
     nets = FCN32s(n_class=2, input_channels=6)
 
     if opt.use_gpu:

@@ -9,7 +9,7 @@ import itertools
 
 
 class DefectAdder(object):
-    def __init__(self, mode='geometry', size_range=(0.05, 0.6), defect_shape=('circle', 'square'), normal_only=False):
+    def __init__(self, mode='geometry', size_range=(0.05, 0.5), defect_shape=('circle', 'square'), normal_only=False):
         self.mode = mode
         self.size_range = size_range
         self.defect_shape = defect_shape
@@ -18,10 +18,11 @@ class DefectAdder(object):
     def __call__(self, input):
         # assert isinstance(input, Image)
         # assert len(input.shape) == 3
+        input_ = input.copy()
         if self.normal_only:
             return [input, input, input]
         if self.mode == 'geometry':
-            output, target = self.add_defect(input)
+            output, target = self.add_defect(input_)
         else:
             output = input
             target = input
@@ -46,16 +47,18 @@ class DefectAdder(object):
             while True:
                 x1 = int(np.random.random() * w)
                 y1 = int(np.random.random() * h)
-                width = int(np.random.randint(1, size))
                 if x1 == x or y1 == y:
                     continue
-                draw.line([x, y, x1, y1], fill=color, width=width)
+                draw.line([x, y, x1, y1], fill=color, width=size)
                 break
             target = self.generate_target(input.size, shape, [x, y, x1, y1], size)
         return input, target
 
-    def generate_target(self, input_size, mode, xy, size=None):
+    @staticmethod
+    def generate_target(input_size, mode, xy, size=None):
         target = np.zeros(input_size)
+        target = Image.fromarray(target)
+        draw = ImageDraw.Draw(target)
         if mode == 'circle':
             center = [(xy[0] + xy[2]) / 2, (xy[1] + xy[3]) / 2]
             radius = (xy[2] - xy[0]) / 2
@@ -71,9 +74,7 @@ class DefectAdder(object):
                 if np.all(((p - p0) > 0) & ((p1 - p) > 0)):
                     target[i, j] = 1
         elif mode == 'line':
-            assert size is not None
-            target = cv2.line(target, [xy[0], xy[1]], [xy[2], xy[3]], 255, size)
-            pass
+            draw.line(xy, fill=1, width=size)
         return target
 
     def __repr__(self):
