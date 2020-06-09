@@ -10,7 +10,6 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel
 from tqdm.autonotebook import tqdm
 from model import *
-from fcn import *
 from defect import DefectAdder, NormalizeList, ToTensorList
 from utils import *
 from loss import *
@@ -19,17 +18,21 @@ from trainer import *
 
 
 class Config(object):
-    data_path = r'/data/sdv2/GAN/data/gan_defect/grid_96/train'
-    val_path = r'/data/sdv2/GAN/data/gan_defect/grid_96/val'
-    save_path = '/data/sdv2/GAN/GAN_defect/imgs/0430'
-    work_dir = '/data/sdv2/GAN/GAN_defect/workdirs/0430'
-    val_save_path = '/data/sdv2/GAN/GAN_defect/imgs/0430-val'
+    data_path = r'/data/sdv2/GAN/data/gan_defect/grid_384/train'
+    val_path = r'/data/sdv2/GAN/data/gan_defect/grid_384/val'
+    save_path = '/data/sdv2/GAN/GAN_defect/imgs/0608'
+    work_dir = '/data/sdv2/GAN/GAN_defect/workdirs/0608'
+
+    if not os.path.exists(save_path + '/train'):
+        os.makedirs(save_path + '/train')
+    if not os.path.exists(save_path + '/val'):
+        os.makedirs(save_path + '/val')
 
     num_workers = 4
     image_size = 128
     batch_size = 16
-    max_epoch = 300
-    steps = [100, 200]
+    max_epoch = 100
+    steps = [40, 80]
     lrg = 1e-4
     lrd = 1e-4
     lrs = 1e-2
@@ -49,10 +52,6 @@ class Config(object):
     nodes = 1
     nr = 0
 
-    d_every = 1
-    g_every = 1
-    s_every = 5
-    s_start = 0
     # netd_path = '/data/sdv2/GAN/GAN_defect/workdirs/0427-1ge02/d_ckpt_e2000.pth'
     # netg_path = '/data/sdv2/GAN/GAN_defect/workdirs/0427-1ge02/g_ckpt_e2000.pth'
     netd_path = None
@@ -103,7 +102,7 @@ def train(opt):
             tv.transforms.Resize(opt.image_size),
             tv.transforms.CenterCrop(opt.image_size),
             # tv.transforms.ToTensor(),
-            DefectAdder(mode=opt.defect_mode, defect_shape=('circle',)),
+            DefectAdder(mode=opt.defect_mode, defect_shape=('circle', 'square')),
             ToTensorList(),
             NormalizeList(opt.mean, opt.std),
             # tv.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -119,36 +118,28 @@ def train(opt):
         val_dataloader = None
 
     map_location = lambda storage, loc: storage
-    netd = Discriminator(opt)
+    # netd = Discriminator(opt)
     # netg = Generater(opt)
     netg = U_Net()
-    nets = FCN32s(n_class=2, input_channels=6)
 
     if opt.use_gpu:
-        netd.cuda()
+        # netd.cuda()
         netg.cuda()
-        nets.cuda()
 
-    if opt.netd_path:
-        print('loading checkpoint for discriminator...')
-        checkpoint = modify_checkpoint(netd, torch.load(opt.netd_path, map_location=map_location)['net'])
-        netd.load_state_dict(checkpoint, strict=False)
     if opt.netg_path:
         print('loading checkpoint for generator...')
         checkpoint = modify_checkpoint(netg, torch.load(opt.netg_path, map_location=map_location)['net'])
         netg.load_state_dict(checkpoint, strict=False)
 
     optimizer_g = optim.Adam(netg.parameters(), opt.lrg, betas=(opt.beta1, 0.999))
-    optimizer_d = optim.Adam(netd.parameters(), opt.lrd, betas=(opt.beta1, 0.999))
-    optimizer_s = optim.Adam(nets.parameters(), opt.lrs, betas=(opt.beta1, 0.999))
+    # optimizer_d = optim.Adam(netd.parameters(), opt.lrd, betas=(opt.beta1, 0.999))
+    # optimizer_s = optim.Adam(nets.parameters(), opt.lrs, betas=(opt.beta1, 0.999))
 
     scheduler_g = torch.optim.lr_scheduler.MultiStepLR(optimizer_g, milestones=opt.steps, gamma=0.1)
-    scheduler_d = torch.optim.lr_scheduler.MultiStepLR(optimizer_d, milestones=opt.steps, gamma=0.1)
-    scheduler_s = torch.optim.lr_scheduler.MultiStepLR(optimizer_s, milestones=opt.steps, gamma=0.1)
+    # scheduler_d = torch.optim.lr_scheduler.MultiStepLR(optimizer_d, milestones=opt.steps, gamma=0.1)
+    # scheduler_s = torch.optim.lr_scheduler.MultiStepLR(optimizer_s, milestones=opt.steps, gamma=0.1)
 
-    trainer = Trainer(opt, [netd, netg, nets], [optimizer_d, optimizer_g, optimizer_s],
-                      [scheduler_d, scheduler_g, scheduler_s],
-                      train_dataloader, val_dataloader)
+    trainer = Trainer(opt, netg, optimizer_g, scheduler_g, train_dataloader, val_dataloader)
     trainer.train()
 
 
@@ -168,7 +159,7 @@ def distributed_train(gpu, opt):
         tv.transforms.Resize(opt.image_size),
         tv.transforms.CenterCrop(opt.image_size),
         # tv.transforms.ToTensor(),
-        DefectAdder(mode=opt.defect_mode, defect_shape=('line',), normal_only=True),
+        DefectAdder(mode=opt.defect_mode, defect_shape=('line',)),
         ToTensorList(),
         NormalizeList(opt.mean, opt.std),
         # tv.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -190,7 +181,7 @@ def distributed_train(gpu, opt):
             tv.transforms.Resize(opt.image_size),
             tv.transforms.CenterCrop(opt.image_size),
             # tv.transforms.ToTensor(),
-            DefectAdder(mode=opt.defect_mode, defect_shape=('line',)),
+            DefectAdder(mode=opt.defect_mode, defect_shape=('circle', 'square')),
             ToTensorList(),
             NormalizeList(opt.mean, opt.std),
             # tv.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))

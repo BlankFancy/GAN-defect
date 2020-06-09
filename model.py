@@ -113,10 +113,10 @@ class U_Net(nn.Module):
         d1 = self.Conv_1x1(d2)
         d1 = self.tanh(d1)
 
-        s1 = self.Conv_1x1_s(d2)
-        o1 = torch.cat([d1, s1], dim=1)
+        # s1 = self.Conv_1x1_s(d2)
+        # o1 = torch.cat([d1, s1], dim=1)
 
-        return o1
+        return d1
 
 
 class Generater(nn.Module):

@@ -9,7 +9,7 @@ import itertools
 
 
 class DefectAdder(object):
-    def __init__(self, mode='geometry', size_range=(0.05, 0.5), defect_shape=('circle', 'square'), normal_only=False):
+    def __init__(self, mode='geometry', size_range=(0.05, 0.5), defect_shape=('line',), normal_only=False):
         self.mode = mode
         self.size_range = size_range
         self.defect_shape = defect_shape
@@ -24,8 +24,7 @@ class DefectAdder(object):
         if self.mode == 'geometry':
             output, target = self.add_defect(input_)
         else:
-            output = input
-            target = input
+            raise NotImplementedError
         return [input, output, target]
 
     def add_defect(self, input):
@@ -60,19 +59,9 @@ class DefectAdder(object):
         target = Image.fromarray(target)
         draw = ImageDraw.Draw(target)
         if mode == 'circle':
-            center = [(xy[0] + xy[2]) / 2, (xy[1] + xy[3]) / 2]
-            radius = (xy[2] - xy[0]) / 2
-            for i, j in itertools.product(range(input_size[0]), range(input_size[1])):
-                distance = np.sqrt(np.sum(np.square(np.array([i, j] - np.array(center)))))
-                if distance <= radius:
-                    target[i, j] = 1
+            draw.ellipse(xy, fill=1)
         elif mode == 'square':
-            for i, j in itertools.product(range(input_size[0]), range(input_size[1])):
-                p0 = np.array([xy[0], xy[2]])
-                p1 = np.array([xy[1], xy[3]])
-                p = np.array([i, j])
-                if np.all(((p - p0) > 0) & ((p1 - p) > 0)):
-                    target[i, j] = 1
+            draw.rectangle(xy, fill=1)
         elif mode == 'line':
             draw.line(xy, fill=1, width=size)
         return target
